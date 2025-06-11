@@ -1,18 +1,30 @@
-# Sample Hardhat Project
+# 🧾 Inheritance Smart Contracts – BΔLT
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a Hardhat Ignition module that deploys that contract.
+This repository contains the smart contracts powering **BΔLT (Bitcoin Automated Legacy Trust)** — a decentralized inheritance protocol designed to operate on **Rootstock (RSK)**blockchains.
 
-Try running some of the following tasks:
+## 📦 Project Structure
 
-```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat ignition deploy ./ignition/modules/Lock.js
-```
+- **InheritanceFactory.sol**  
+  The factory contract responsible for deploying new instances of `InheritanceVault.sol`. It maintains a registry of all Vaults created by users and acts as the entry point for inheritance configuration.
 
-Deploying InheritanceVault...
-InheritanceVault deployed at: 0xf59DaEf6653C911c6Df0352541591C1B97A01ef2
-Deploying InheritanceRelease...
-InheritanceRelease deployed at: 0x4cfb994c7a2484B600C965622137902a73b1B3cb 
+- **InheritanceVault.sol**  
+  A personalized inheritance vault deployed per user. It securely holds funds and manages inheritance logic based on inactivity timeframes. The vault allows for:
+  - Setting a designated heir
+  - Defining an inactivity period (e.g., 6 months)
+  - Manual claim by heir if the testator becomes inactive
+  - Cancellation or retrieval by the testator while still active
+
+## ⚙️ Requirements
+
+- Node.js & npm
+- Hardhat (development environment)
+- Metamask or any Web3-compatible wallet
+- An RSK node or public RPC endpoint
+
+## 🚀 Getting Started
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/your-org/inheritance-contracts.git
+   cd inheritance-contracts
