@@ -3,7 +3,10 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.13",
-    "hardhat": "^2.22.19"
+    "chai": "^4.3.7",
+    "hardhat": "^2.26.1",
+    "hardhat-coverage": "^0.9.19",
+    "mocha": "^11.7.1"
   },
   "dependencies": {
     "dotenv": "^16.4.7",

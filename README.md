@@ -1,6 +1,6 @@
 # 🧾 Inheritance Smart Contracts – BΔLT
 
-This repository contains the smart contracts powering **BΔLT (Bitcoin Automated Legacy Trust)** — a decentralized inheritance protocol designed to operate on **Rootstock (RSK)**blockchains.
+This repository contains the smart contracts powering **BΔLT (Bitcoin Autonomous Legacy Trust)** — a decentralized inheritance protocol designed to operate on **Rootstock (RSK)**blockchains.
 
 ## 📦 Project Structure
 
