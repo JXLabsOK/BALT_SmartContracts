@@ -41,6 +41,7 @@ contract InheritanceVault {
 
         heir = _heir;
         inheritanceAmount = netAmount;
+        lastCheckIn = block.timestamp;
 
         emit InheritanceRegistered(testator, heir, inheritanceAmount, inactivityPeriod);
     }

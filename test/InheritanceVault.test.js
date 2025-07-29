@@ -117,4 +117,33 @@ describe("InheritanceVault (via Factory)", function () {
     const newLastCheckIn = (await vault.getInheritanceDetails())[2];
     expect(newLastCheckIn).to.be.gt(oldLastCheckIn);
   });
+
+  it("should update lastCheckIn on registerInheritance", async () => {
+    const Factory = await ethers.getContractFactory("InheritanceFactory");
+    const tempFactory = await Factory.deploy(testator.address);
+    await tempFactory.waitForDeployment();
+
+    const tx = await tempFactory.connect(testator).createInheritanceVault(inactivityPeriod);
+    await tx.wait();
+
+    const vaultAddresses = await tempFactory.getVaultsByTestator(testator.address);
+    const tempVaultAddress = vaultAddresses[vaultAddresses.length - 1];
+
+    const Vault = await ethers.getContractFactory("InheritanceVault");
+    const tempVault = await Vault.attach(tempVaultAddress);
+
+    const detailsBefore = await tempVault.getInheritanceDetails();
+    const prevLastCheckIn = detailsBefore[2];
+
+    await ethers.provider.send("evm_increaseTime", [100]);
+    await ethers.provider.send("evm_mine");
+
+    await tempVault.connect(testator).registerInheritance(heir.address, {
+    value: parseEther("1"),
+  });
+
+  const detailsAfter = await tempVault.getInheritanceDetails();
+  expect(detailsAfter[2]).to.be.gt(prevLastCheckIn);
+});
+
 });
