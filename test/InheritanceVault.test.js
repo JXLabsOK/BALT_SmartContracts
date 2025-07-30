@@ -166,4 +166,11 @@ it("should revert if deposit is below minimum (1000 satoshis)", async () => {
   ).to.be.revertedWith("Deposit too small, minimum is 1000 satoshis");
 });
 //BΔLT-003 END
+//BΔLT-006
+it("should revert if heir is the zero address", async function () {
+  await expect(
+    vault.connect(testator).registerInheritance(ethers.ZeroAddress, { value: depositAmount })
+  ).to.be.revertedWith("Invalid heir address");
+});
+//BΔLT-006 END
 });

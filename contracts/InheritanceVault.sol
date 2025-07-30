@@ -31,6 +31,7 @@ contract InheritanceVault {
     function registerInheritance(address _heir) public payable {
         require(msg.sender == testator, "Only the testator can register the inheritance");
         require(msg.value > 0, "Must deposit funds for inheritance");
+        require(_heir != address(0), "Invalid heir address"); //BΔLT-006
         require(heir == address(0), "Inheritance already registered");
         require(inheritanceStatus == Status.Active, "Inheritance is not active");
 
@@ -48,7 +49,7 @@ contract InheritanceVault {
         (bool sent, ) = commissionWallet.call{value: fee}("");
         require(sent, "Commission transfer failed");        
         //BΔLT-004 END
-        
+
         emit InheritanceRegistered(testator, heir, inheritanceAmount, inactivityPeriod);
     }
 
