@@ -117,7 +117,7 @@ describe("InheritanceVault (via Factory)", function () {
     const newLastCheckIn = (await vault.getInheritanceDetails())[2];
     expect(newLastCheckIn).to.be.gt(oldLastCheckIn);
   });
-
+  //BΔLT-002
   it("should update lastCheckIn on registerInheritance", async () => {
     const Factory = await ethers.getContractFactory("InheritanceFactory");
     const tempFactory = await Factory.deploy(testator.address);
@@ -145,5 +145,25 @@ describe("InheritanceVault (via Factory)", function () {
   const detailsAfter = await tempVault.getInheritanceDetails();
   expect(detailsAfter[2]).to.be.gt(prevLastCheckIn);
 });
+//BΔLT-002 END
+//BΔLT-003
+it("should revert if deposit is below minimum (1000 satoshis)", async () => {  
+  const tx = await factory.connect(testator).createInheritanceVault(inactivityPeriod);
+  await tx.wait();
 
+  const vaultAddresses = await factory.getVaultsByTestator(testator.address);
+  const freshVaultAddress = vaultAddresses[vaultAddresses.length - 1];
+
+  const Vault = await ethers.getContractFactory("InheritanceVault");
+  const freshVault = await Vault.attach(freshVaultAddress);
+
+  const tinyDeposit = hre.ethers.parseUnits("0.000000009", "ether"); // 900 satoshis
+
+  await expect(
+    freshVault.connect(testator).registerInheritance(heir.address, {
+      value: tinyDeposit,
+    })
+  ).to.be.revertedWith("Deposit too small, minimum is 1000 satoshis");
+});
+//BΔLT-003 END
 });

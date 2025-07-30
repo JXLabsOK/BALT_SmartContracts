@@ -9,6 +9,7 @@ contract InheritanceVault {
     uint public lastCheckIn;
     uint immutable public inactivityPeriod;
     uint public createdAt;
+    uint256 constant MIN_DEPOSIT = 1000 * 1e10; // 1000 satoshis in wei //BΔLT-003
 
     enum Status { Active, Released, Cancelled }
     Status public inheritanceStatus;
@@ -34,14 +35,17 @@ contract InheritanceVault {
         require(inheritanceStatus == Status.Active, "Inheritance is not active");
 
         uint fee = (msg.value * 5) / 1000; // 0.5% commission
+        require(fee > 0, "Deposit amount too low to register inheritance"); //BΔLT-003               
+
         uint netAmount = msg.value - fee;
+        require(netAmount >= MIN_DEPOSIT, "Deposit too small, minimum is 1000 satoshis"); //BΔLT-003
 
         (bool sent, ) = commissionWallet.call{value: fee}("");
         require(sent, "Commission transfer failed");
 
         heir = _heir;
         inheritanceAmount = netAmount;
-        lastCheckIn = block.timestamp;
+        lastCheckIn = block.timestamp; //BΔLT-002
 
         emit InheritanceRegistered(testator, heir, inheritanceAmount, inactivityPeriod);
     }
