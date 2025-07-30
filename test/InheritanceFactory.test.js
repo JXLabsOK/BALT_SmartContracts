@@ -130,4 +130,12 @@ it("should return all created vaults", async function () {
     expect(isAddress(addr)).to.be.true;
   });
 });
+
+//BΔLT-005
+it("should revert if deployed with a zero commission wallet address", async function () {
+  const Factory = await ethers.getContractFactory("InheritanceFactory");
+  await expect(Factory.deploy(ethers.ZeroAddress)).to.be.revertedWith("Invalid commission wallet");
+});
+//BΔLT-005 END
+
 });

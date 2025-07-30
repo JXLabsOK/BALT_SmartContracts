@@ -11,6 +11,7 @@ contract InheritanceFactory {
     event VaultCreated(address indexed testator, address vaultAddress);
 
     constructor(address _commissionWallet) {
+        require(_commissionWallet != address(0), "Invalid commission wallet"); //BΔLT-005
         commissionWallet = _commissionWallet;
     }
 
