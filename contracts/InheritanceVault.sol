@@ -39,14 +39,16 @@ contract InheritanceVault {
 
         uint netAmount = msg.value - fee;
         require(netAmount >= MIN_DEPOSIT, "Deposit too small, minimum is 1000 satoshis"); //BΔLT-003
-
-        (bool sent, ) = commissionWallet.call{value: fee}("");
-        require(sent, "Commission transfer failed");
-
+        
+        //BΔLT-004
         heir = _heir;
         inheritanceAmount = netAmount;
         lastCheckIn = block.timestamp; //BΔLT-002
 
+        (bool sent, ) = commissionWallet.call{value: fee}("");
+        require(sent, "Commission transfer failed");        
+        //BΔLT-004 END
+        
         emit InheritanceRegistered(testator, heir, inheritanceAmount, inactivityPeriod);
     }
 
