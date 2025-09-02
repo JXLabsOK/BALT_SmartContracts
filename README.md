@@ -28,3 +28,7 @@ This repository contains the smart contracts powering **BΔLT (Bitcoin Autonomou
    ```bash
    git clone https://github.com/your-org/inheritance-contracts.git
    cd inheritance-contracts
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
