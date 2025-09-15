@@ -35,7 +35,7 @@ contract InheritanceVault {
         require(heir == address(0), "Inheritance already registered");
         require(inheritanceStatus == Status.Active, "Inheritance is not active");
 
-        uint fee = (msg.value * 5) / 1000; // 0.5% commission
+        uint fee = (msg.value * 8) / 1000; // 0.8% commission
         require(fee > 0, "Deposit amount too low to register inheritance"); //BΔLT-003               
 
         uint netAmount = msg.value - fee;
