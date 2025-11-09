@@ -2,6 +2,7 @@ const { expect } = require("chai");
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const parseEther = hre.ethers.parseEther;
+const toWei = (s) => hre.ethers.parseEther(s);
 
 describe("InheritanceVault (via Factory)", function () {
   let testator, heir, other;
@@ -173,4 +174,174 @@ it("should revert if heir is the zero address", async function () {
   ).to.be.revertedWith("Invalid heir address");
 });
 //BΔLT-006 END
+
+describe("Fees & Caps (standalone)", function () {
+  const inactivityPeriod = 60 * 60 * 24 * 30;
+  const toWei = (s) => hre.ethers.parseEther(s);
+
+  let testator, heir, other;
+
+  beforeEach(async () => {
+    [testator, heir, other] = await ethers.getSigners();
+  });
+
+  async function newVaultWithCommission(commissionWallet) {
+    const Factory = await ethers.getContractFactory("InheritanceFactory");
+    const f = await Factory.deploy(commissionWallet);
+    await f.waitForDeployment();
+
+    await f.connect(testator).createInheritanceVault(inactivityPeriod);
+    const addrs = await f.getVaultsByTestator(testator.address);
+    const vAddr = addrs[addrs.length - 1];
+
+    const Vault = await ethers.getContractFactory("InheritanceVault");
+    return { f, v: await Vault.attach(vAddr) };
+  }
+
+  it("fee free-tier: <= 0.01 BTC cobra 0 y bps/cap = 0", async () => {
+    const { v } = await newVaultWithCommission(testator.address);
+    const dep = toWei("0.01");
+    await expect(
+      v.connect(testator).registerInheritance(heir.address, { value: dep })
+    ).to.emit(v, "FeeApplied").withArgs(testator.address, 0, 0, 0, dep);
+    expect(await v.inheritanceAmount()).to.equal(dep);
+  });
+
+  it("fee 0.8% para 0.25 BTC sin cap (fee=0.002)", async () => {
+    const { v } = await newVaultWithCommission(testator.address);
+    const dep = toWei("0.25");
+    const expectedFee = toWei("0.002");
+    await expect(
+      v.connect(testator).registerInheritance(heir.address, { value: dep })
+    ).to.emit(v, "FeeApplied").withArgs(testator.address, 80, toWei("0.20"), expectedFee, dep);
+    expect(await v.inheritanceAmount()).to.equal(dep - expectedFee);
+  });
+
+  it("fee 0.8% para 5 BTC (fee=0.04), sin cap", async () => {
+    const { v } = await newVaultWithCommission(testator.address);
+    const dep = toWei("5");
+    const expectedFee = toWei("0.04");
+    await v.connect(testator).registerInheritance(heir.address, { value: dep });
+    expect(await v.inheritanceAmount()).to.equal(dep - expectedFee);
+  });
+
+  it("fee 0.7% para 25 BTC (fee=0.175), cap 0.20 no aplica", async () => {
+    const { v } = await newVaultWithCommission(testator.address);
+    const dep = toWei("25");
+    const expectedFee = toWei("0.175");
+    await expect(
+      v.connect(testator).registerInheritance(heir.address, { value: dep })
+    ).to.emit(v, "FeeApplied").withArgs(testator.address, 70, toWei("0.20"), expectedFee, dep);
+    expect(await v.inheritanceAmount()).to.equal(dep - expectedFee);
+  });
+
+  it("cap 0.20 en 50 BTC: raw=0.30 (0.6%) pero fee=0.20", async () => {
+    const { v } = await newVaultWithCommission(testator.address);
+    const dep = toWei("50");
+    const expectedFee = toWei("0.20");
+    await expect(
+      v.connect(testator).registerInheritance(heir.address, { value: dep })
+    ).to.emit(v, "FeeApplied").withArgs(testator.address, 60, toWei("0.20"), expectedFee, dep);
+    expect(await v.inheritanceAmount()).to.equal(dep - expectedFee);
+  });
+
+  it("cap 0.30 en 100 BTC: raw=0.60 (0.6%) pero fee=0.30", async () => {
+    const { v } = await newVaultWithCommission(testator.address);
+    const dep = toWei("100");
+    const expectedFee = toWei("0.30");
+    await expect(
+      v.connect(testator).registerInheritance(heir.address, { value: dep })
+    ).to.emit(v, "FeeApplied").withArgs(testator.address, 60, toWei("0.30"), expectedFee, dep);
+    expect(await v.inheritanceAmount()).to.equal(dep - expectedFee);
+  });
+
+  it("cap 0.50 en 1000 BTC: raw=5.0 (0.5%) pero fee=0.50", async () => {
+    const { v } = await newVaultWithCommission(testator.address);
+    const dep = toWei("1000");
+    const expectedFee = toWei("0.50");
+    await expect(
+      v.connect(testator).registerInheritance(heir.address, { value: dep })
+    ).to.emit(v, "FeeApplied").withArgs(testator.address, 50, toWei("0.50"), expectedFee, dep);
+    expect(await v.inheritanceAmount()).to.equal(dep - expectedFee);
+  });
+
+  it(">1000 BTC usa cap 0.75 (p.ej., 1200 BTC → fee=0.75)", async () => {
+    const { v } = await newVaultWithCommission(testator.address);
+    const dep = toWei("1200");
+    const expectedFee = toWei("0.75");
+    await expect(
+      v.connect(testator).registerInheritance(heir.address, { value: dep })
+    ).to.emit(v, "FeeApplied").withArgs(testator.address, 50, toWei("0.75"), expectedFee, dep);
+    expect(await v.inheritanceAmount()).to.equal(dep - expectedFee);
+  });
+
+  it("bps boundaries inclusivos: 5→80bps, 30→70bps, 100→60bps", async () => {
+    {
+      const { v } = await newVaultWithCommission(testator.address);
+      const dep = toWei("5");
+      await expect(
+        v.connect(testator).registerInheritance(heir.address, { value: dep })
+      ).to.emit(v, "FeeApplied").withArgs(testator.address, 80, toWei("0.20"), toWei("0.04"), dep);
+    }
+    {
+      const { v } = await newVaultWithCommission(testator.address);
+      const dep = toWei("30");
+      await expect(
+        v.connect(testator).registerInheritance(heir.address, { value: dep })
+      ).to.emit(v, "FeeApplied").withArgs(testator.address, 70, toWei("0.20"), toWei("0.20"), dep); // capped
+    }
+    {
+      const { v } = await newVaultWithCommission(testator.address);
+      const dep = toWei("100");
+      await expect(
+        v.connect(testator).registerInheritance(heir.address, { value: dep })
+      ).to.emit(v, "FeeApplied").withArgs(testator.address, 60, toWei("0.30"), toWei("0.30"), dep);
+    }
+  });
+
+  it("cap boundaries inclusivos: 50→0.20, 250→0.30, 500→0.40, 1000→0.50", async () => {
+    {
+      const { v } = await newVaultWithCommission(testator.address);
+      const dep = toWei("50");
+      await expect(
+        v.connect(testator).registerInheritance(heir.address, { value: dep })
+      ).to.emit(v, "FeeApplied").withArgs(testator.address, 60, toWei("0.20"), toWei("0.20"), dep);
+    }
+    {
+      const { v } = await newVaultWithCommission(testator.address);
+      const dep = toWei("250");
+      await expect(
+        v.connect(testator).registerInheritance(heir.address, { value: dep })
+      ).to.emit(v, "FeeApplied").withArgs(testator.address, 50, toWei("0.30"), toWei("0.30"), dep);
+    }
+    {
+      const { v } = await newVaultWithCommission(testator.address);
+      const dep = toWei("500");
+      await expect(
+        v.connect(testator).registerInheritance(heir.address, { value: dep })
+      ).to.emit(v, "FeeApplied").withArgs(testator.address, 50, toWei("0.40"), toWei("0.40"), dep);
+    }
+    {
+      const { v } = await newVaultWithCommission(testator.address);
+      const dep = toWei("1000");
+      await expect(
+        v.connect(testator).registerInheritance(heir.address, { value: dep })
+      ).to.emit(v, "FeeApplied").withArgs(testator.address, 50, toWei("0.50"), toWei("0.50"), dep);
+    }
+  });
+
+  it("transfiere la comisión a la commissionWallet (usando 'other' como wallet)", async () => {
+    const { v } = await newVaultWithCommission(other.address);
+    const dep = toWei("25"); // 0.7% → 0.175
+    const expectedFee = toWei("0.175");
+
+    const before = await ethers.provider.getBalance(other.address);
+    await v.connect(testator).registerInheritance(heir.address, { value: dep });
+    const after = await ethers.provider.getBalance(other.address);
+
+    expect(after - before).to.equal(expectedFee);
+    expect(await v.inheritanceAmount()).to.equal(dep - expectedFee);
+  });
+});
+
 });
