@@ -10,5 +10,10 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY],
       chainId: 30,
     },
+    rsk_testnet: {
+      url: process.env.RSK_TESTNET_RPC_URL || "https://public-node.testnet.rsk.co",
+      accounts: [process.env.PRIVATE_KEY],
+      chainId: 31,
+    },
   },
 };
