@@ -2,9 +2,7 @@
 pragma solidity ^0.8.20;
 
 // Minimal ERC-20 interface
-interface IERC20_USD6 {
-    function transfer(address to, uint256 value) external returns (bool);
-    function transferFrom(address from, address to, uint256 value) external returns (bool);
+interface IERC20Metadata6 {
     function balanceOf(address account) external view returns (uint256);
     function decimals() external view returns (uint8);
 }
@@ -58,7 +56,14 @@ contract ERC20InheritanceVaultUSD6V2 {
     uint256 private constant CAP3_VALUE = 40_000 * UNIT;
     uint256 private constant CAP4_VALUE = 50_000 * UNIT;
     uint256 private constant CAP5_VALUE = 60_000 * UNIT;
-    
+
+    // Selectores estándar ERC-20 (transfer / transferFrom)
+    bytes4 private constant TRANSFER_SELECTOR =
+        0xa9059cbb; // keccak256("transfer(address,uint256)")
+    bytes4 private constant TRANSFER_FROM_SELECTOR =
+        0x23b872dd; // keccak256("transferFrom(address,address,uint256)")
+
+    // === Events ===
     event InheritanceRegistered(address indexed testator, address indexed heir, uint256 amount, uint256 inactivityPeriod);
     event CheckInPerformed(address indexed testator, uint256 timestamp);
     event InheritanceReleased(address indexed heir, uint256 amount);
@@ -72,7 +77,7 @@ contract ERC20InheritanceVaultUSD6V2 {
         require(_feeBps < 10_000, "fee too high"); // < 100%
         require(_inactivityPeriod > 0, "Invalid inactivity");
         
-        uint8 decs = IERC20_USD6(_token).decimals();
+        uint8 decs = IERC20Metadata6(_token).decimals();
         require(decs == 6, "Token must have 6 decimals");
 
         testator = _testator;
@@ -129,7 +134,32 @@ contract ERC20InheritanceVaultUSD6V2 {
         return (finalFee, bps, cap);
     }
 
-    // --- Core logic ---    
+    // === Internal helpers: SafeERC20-like para USDT / USDC ===
+    function _safeTransfer(address to, uint256 value) internal {
+        (bool success, bytes memory data) =
+            token.call(abi.encodeWithSelector(TRANSFER_SELECTOR, to, value));
+        require(success, "USDX: transfer failed");
+        if (data.length > 0) {
+            // Tokens estándar devuelven bool; algunos como USDT pueden no devolver nada
+            require(abi.decode(data, (bool)), "USDX: transfer returned false");
+        }
+    }
+
+    function _safeTransferFrom(address from, address to, uint256 value) internal {
+        (bool success, bytes memory data) =
+            token.call(
+                abi.encodeWithSelector(TRANSFER_FROM_SELECTOR, from, to, value)
+            );
+        require(success, "USDX: transferFrom failed");
+        if (data.length > 0) {
+            require(
+                abi.decode(data, (bool)),
+                "USDX: transferFrom returned false"
+            );
+        }
+    }
+
+    // === Core logic ===    
     function registerInheritance(address _heir, uint256 depositAmount) external {
         require(msg.sender == testator, "Only the testator can register");
         require(_heir != address(0), "Invalid heir address");
@@ -138,10 +168,7 @@ contract ERC20InheritanceVaultUSD6V2 {
         require(depositAmount > 0, "Must deposit funds");
 
         // Pull full deposit into the vault first
-        require(
-            IERC20_USD6(token).transferFrom(testator, address(this), depositAmount),
-            "Deposit transfer failed"
-        );
+        _safeTransferFrom(testator, address(this), depositAmount);
 
         // Compute fee and net inheritance
         (uint256 fee, uint16 bps, uint256 cap) = _computeUpfrontFee(depositAmount);
@@ -155,10 +182,7 @@ contract ERC20InheritanceVaultUSD6V2 {
 
         // Send commission out from the vault, if any
         if (fee > 0) {
-            require(
-                IERC20_USD6(token).transfer(commissionWallet, fee),
-                "Commission transfer failed"
-            );
+            _safeTransfer(commissionWallet, fee);
         }
 
         emit InheritanceRegistered(testator, heir, netAmount, inactivityPeriod);
@@ -176,11 +200,11 @@ contract ERC20InheritanceVaultUSD6V2 {
         require(msg.sender == testator, "Only testator");
         require(inheritanceStatus == Status.Active, "Not active");
 
-        uint256 bal = IERC20_USD6(token).balanceOf(address(this));
+        uint256 bal = IERC20Metadata6(token).balanceOf(address(this));
         require(bal > 0, "No balance");
 
         inheritanceStatus = Status.Cancelled;
-        require(IERC20_USD6(token).transfer(testator, bal), "Refund failed");
+        _safeTransfer(testator, bal);
 
         emit InheritanceCancelled(testator, bal);        
     }
@@ -192,9 +216,9 @@ contract ERC20InheritanceVaultUSD6V2 {
 
         inheritanceStatus = Status.Released;
 
-        uint256 bal = IERC20_USD6(token).balanceOf(address(this));
+        uint256 bal = IERC20Metadata6(token).balanceOf(address(this));
         require(bal > 0, "No balance to claim");
-        require(IERC20_USD6(token).transfer(heir, bal), "Transfer failed");
+        _safeTransfer(heir, bal);
 
         emit InheritanceReleased(heir, bal);
     }

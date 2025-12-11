@@ -97,11 +97,17 @@ describe("ERC20InheritanceVaultUSD6V2", function () {
       .connect(testator)
       .registerInheritance(heir.address, amount);
 
-    await expect(tx)
-      .to.emit(vault, "InheritanceRegistered")
-      .withArgs(testator.address, heir.address, amount, inactivityPeriod)
-      .and.to.emit(vault, "FeeApplied")
-      .withArgs(testator.address, 0, 0, 0, amount);
+   await expect(tx)
+    .to.emit(vault, "InheritanceRegistered")
+    .withArgs(testator.address, heir.address, amount, BigInt(inactivityPeriod))
+    .and.to.emit(vault, "FeeApplied")
+    .withArgs(
+      testator.address,
+      0,          // uint16 bpsApplied
+      0n,         // uint256 capApplied
+      0n,         // uint256 feeAmount
+      amount      // uint256 grossDeposit
+    );
 
     const commissionBalanceAfter = await token.balanceOf(commissionWallet.address);
     expect(commissionBalanceAfter - commissionBalanceBefore).to.equal(0n);
