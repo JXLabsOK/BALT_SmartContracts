@@ -15,5 +15,11 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY],
       chainId: 31,
     },
+    // Ethereum mainnet
+    mainnet: {
+      url: process.env.ETH_MAINNET_RPC_URL || "https://eth-mainnet.g.alchemy.com/v2/hKJAoNuS2RclSpv2Jtvv7",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 1,
+    },
   },
 };
