@@ -4,7 +4,7 @@ const hre = require("hardhat");
 async function main() {
   const { ethers } = hre;
 
-  const SUBSCRIPTION_REGISTRY = "0x267d0473ebc1c31ab28ea423b33b2b4ccccc9d6c";
+  const SUBSCRIPTION_REGISTRY = "0x98cA1D2cd8Df4B1830Fa9a5c5E56dE9A74bc3c14";
   const COMPANY_WALLET = "0x2e1B3b642eF2ae281535D9Fb8DF6876E4E9EF6d9";
 
   const SUBSCRIPTION_DAYS = 1000;

@@ -4,6 +4,12 @@ require("dotenv").config();
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: "0.8.28",
+  settings: {
+    optimizer: {
+      enabled: true,
+      runs: 200,
+    },
+  },
   networks: {
     rsk_mainnet: {
       url: process.env.RSK_MAINNET_RPC_URL || "https://public-node.rsk.co",
@@ -20,6 +26,12 @@ module.exports = {
       url: process.env.ETH_MAINNET_RPC_URL || "https://eth-mainnet.g.alchemy.com/v2/hKJAoNuS2RclSpv2Jtvv7",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 1,
+    },
+    // Polygon mainnet
+    polygon_mainnet: {
+      url: process.env.POLYGON_MAINNET_RPC_URL || "https://polygon-rpc.com",
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      chainId: 137,
     },
   },
 };

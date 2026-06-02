@@ -4,7 +4,7 @@ const hre = require("hardhat");
 async function main() {
   const { ethers } = hre;
 
-  const SUBSCRIPTION_REGISTRY = "0x267d0473ebc1c31ab28ea423b33b2b4ccccc9d6c";
+  const SUBSCRIPTION_REGISTRY = "0x98cA1D2cd8Df4B1830Fa9a5c5E56dE9A74bc3c14";
 
   const [deployer] = await ethers.getSigners();
 
