@@ -9,6 +9,7 @@ contract BALTGiftVault {
     uint public releaseTimestamp;
     uint public createdAt;
     uint256 constant MIN_DEPOSIT = 1000 * 1e10; // 1000 satoshis in wei // BΔLT-GIFT-003
+    uint256 public constant BENEFICIARY_GAS_TOPUP_WEI = 500 * 1e10; // 500 satoshis in wei
 
     enum Status { Active, Released, Cancelled }
     Status public giftStatus;
@@ -19,6 +20,7 @@ contract BALTGiftVault {
     event GiftReleased(address indexed beneficiary, uint amount);
     event GiftCancelled(address indexed creator, uint refundedAmount);
     event FeeApplied(address indexed creator, uint16 bpsApplied, uint capAppliedWei, uint feeWei, uint grossDepositWei);
+    event BeneficiaryGasTopUpSent(address indexed beneficiary, uint amount);
 
     uint constant FREE_TIER_MAX_WEI = 1e16;  // 0.01 BTC
     uint constant MAX_FEE_WEI       = 5e16;  // 0.05 BTC
@@ -81,18 +83,28 @@ contract BALTGiftVault {
         (uint fee, uint16 bps, uint cap) = _computeUpfrontFee(msg.value);
 
         uint netAmount = msg.value - fee;
-        require(netAmount >= MIN_DEPOSIT, "Deposit too small, minimum is 1000 satoshis"); // BΔLT-GIFT-003
+
+        require(
+            netAmount >= MIN_DEPOSIT + BENEFICIARY_GAS_TOPUP_WEI,
+            "Deposit too small, minimum is 1000 satoshis plus gas top-up"
+        ); // BΔLT-GIFT-003
+
+        uint lockedGiftAmount = netAmount - BENEFICIARY_GAS_TOPUP_WEI;
 
         beneficiary = _beneficiary;
-        giftAmount = netAmount;
+        giftAmount = lockedGiftAmount;
 
         if (fee > 0) {
             (bool sent, ) = commissionWallet.call{value: fee}("");
             require(sent, "Commission transfer failed");
         }
 
+        (bool topUpSent, ) = payable(beneficiary).call{value: BENEFICIARY_GAS_TOPUP_WEI}("");
+        require(topUpSent, "Beneficiary gas top-up transfer failed");
+
         emit GiftRegistered(creator, beneficiary, giftAmount, releaseTimestamp);
         emit FeeApplied(creator, bps, cap, fee, msg.value);
+        emit BeneficiaryGasTopUpSent(beneficiary, BENEFICIARY_GAS_TOPUP_WEI);
     }
 
     function cancelGift() public onlyInitialized {
